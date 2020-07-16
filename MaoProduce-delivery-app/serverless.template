@@ -1,0 +1,260 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "AWS Serverless API that exposes the add, remove and get operations for a platform using Amazon DynamoDB.",
+  "Parameters": {
+    "ShouldCreateTable": {
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "If true then the DynamoDB orderomerging table will be created with the CloudFormation stack."
+    },
+    "CustomerTableName": {
+      "Type": "String",
+      "Description": "Name of DynamoDB table used to store the orderomer post. If left blank a new table will be created.",
+      "MinLength": "0"
+    },
+    "ReadCapacity": {
+      "Type": "Number",
+      "Description": "Read capacity for the DynamoDB orderomer table.",
+      "Default": "3",
+      "MinValue": 1
+    },
+    "WriteCapacity": {
+      "Type": "Number",
+      "Description": "Write capacity for the DynamoDB orderomer table.",
+      "Default": "3",
+      "MinValue": 1
+    }
+  },
+  "Conditions": {
+    "CreateCustomerTable": {
+      "Fn::Equals": [
+        {
+          "Ref": "ShouldCreateTable"
+        },
+        "true"
+      ]
+    },
+    "TableNameGenerated": {
+      "Fn::Equals": [
+        {
+          "Ref": "CustomerTableName"
+        },
+        ""
+      ]
+    }
+  },
+  "Resources": {
+    "GetCustomers": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::GetCustomersAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a list of orders",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "CustomerTable": {
+              "Fn::If": [
+                "CreateCustomerTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "CustomerTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "GetCustomer": {    
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::GetCustomerAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a single orderomer",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "CustomerTable": {
+              "Fn::If": [
+                "CreateCustomerTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "CustomerTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{Id}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "AddCustomer": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::AddCustomerAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to add a orderomer",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "CustomerTable": {
+              "Fn::If": [
+                "CreateCustomerTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "CustomerTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+    "RemoveCustomer": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::RemoveCustomerAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to remove a orderomer",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "CustomerTable": {
+              "Fn::If": [
+                "CreateCustomerTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "CustomerTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{Id}",
+              "Method": "DELETE"
+            }
+          }
+        }
+      }
+    },
+    "CustomerTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Condition": "CreateCustomerTable",
+      "Properties": {
+        "TableName": {
+          "Fn::If": [
+            "TableNameGenerated",
+            {
+              "Ref": "AWS::NoValue"
+            },
+            {
+              "Ref": "CustomerTableName"
+            }
+          ]
+        },
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "Id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "Id",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": {
+            "Ref": "ReadCapacity"
+          },
+          "WriteCapacityUnits": {
+            "Ref": "WriteCapacity"
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "CustomerTable": {
+      "Value": {
+        "Fn::If": [
+          "CreateCustomerTable",
+          {
+            "Ref": "CustomerTable"
+          },
+          {
+            "Ref": "CustomerTableName"
+          }
+        ]
+      }
+    }
+  }
+}
