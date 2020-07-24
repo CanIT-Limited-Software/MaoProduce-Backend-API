@@ -9,22 +9,32 @@
         "true",
         "false"
       ],
-      "Description": "If true then the DynamoDB orderomerging table will be created with the CloudFormation stack."
+      "Description": "If true then the DynamoDB tables will be created with the CloudFormation stack."
     },
     "CustomerTableName": {
       "Type": "String",
-      "Description": "Name of DynamoDB table used to store the orderomer post. If left blank a new table will be created.",
+      "Description": "Name of DynamoDB table used to store the customer post. If left blank a new table will be created.",
+      "MinLength": "0"
+    },
+    "OrderTableName": {
+      "Type": "String",
+      "Description": "Name of DynamoDB table used to store the order post. If left blank a new table will be created.",
+      "MinLength": "0"
+    },
+    "ProductTableName": {
+      "Type": "String",
+      "Description": "Name of DynamoDB table used to store the product post. If left blank a new table will be created.",
       "MinLength": "0"
     },
     "ReadCapacity": {
       "Type": "Number",
-      "Description": "Read capacity for the DynamoDB orderomer table.",
+      "Description": "Read capacity for the DynamoDB tables.",
       "Default": "3",
       "MinValue": 1
     },
     "WriteCapacity": {
       "Type": "Number",
-      "Description": "Write capacity for the DynamoDB orderomer table.",
+      "Description": "Write capacity for the DynamoDB tables.",
       "Default": "3",
       "MinValue": 1
     }
@@ -38,11 +48,46 @@
         "true"
       ]
     },
-    "TableNameGenerated": {
+    "CreateOrderTable": {
+      "Fn::Equals": [
+        {
+          "Ref": "ShouldCreateTable"
+        },
+        "true"
+      ]
+    },
+    "CreateProductTable": {
+      "Fn::Equals": [
+        {
+          "Ref": "ShouldCreateTable"
+        },
+        "true"
+      ]
+    },
+    "CustomerTableGenerated": {
       "Fn::Equals": [
         {
           "Ref": "CustomerTableName"
         },
+
+        ""
+      ]
+    },
+    "OrderTableGenerated": {
+      "Fn::Equals": [
+        {
+          "Ref": "OrderTableName"
+        },
+
+        ""
+      ]
+    },
+    "ProductTableGenerated": {
+      "Fn::Equals": [
+        {
+          "Ref": "ProductTableName"
+        },
+
         ""
       ]
     }
@@ -54,7 +99,7 @@
         "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::GetCustomersAsync",
         "Runtime": "dotnetcore3.1",
         "CodeUri": "",
-        "Description": "Function to get a list of orders",
+        "Description": "Function to get a list of customers",
         "MemorySize": 256,
         "Timeout": 30,
         "Role": null,
@@ -80,7 +125,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/",
+              "Path": "/Customers/",
               "Method": "GET"
             }
           }
@@ -93,7 +138,7 @@
         "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::GetCustomerAsync",
         "Runtime": "dotnetcore3.1",
         "CodeUri": "",
-        "Description": "Function to get a single orderomer",
+        "Description": "Function to get a single customer",
         "MemorySize": 256,
         "Timeout": 30,
         "Role": null,
@@ -119,7 +164,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/{Id}",
+              "Path": "/Customers/{Id}",
               "Method": "GET"
             }
           }
@@ -132,7 +177,7 @@
         "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::AddCustomerAsync",
         "Runtime": "dotnetcore3.1",
         "CodeUri": "",
-        "Description": "Function to add a orderomer",
+        "Description": "Function to add a new customer",
         "MemorySize": 256,
         "Timeout": 30,
         "Role": null,
@@ -158,8 +203,47 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/",
+              "Path": "/Customers/",
               "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+    "UpdateCustomer": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::UpdateCustomerAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to update customer details after editing at front end",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "CustomerTable": {
+              "Fn::If": [
+                "CreateCustomerTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "CustomerTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Customers/{Id}",
+              "Method": "PATCH"
             }
           }
         }
@@ -171,7 +255,7 @@
         "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.CustomerFunctions::RemoveCustomerAsync",
         "Runtime": "dotnetcore3.1",
         "CodeUri": "",
-        "Description": "Function to remove a orderomer",
+        "Description": "Function to remove a customer",
         "MemorySize": 256,
         "Timeout": 30,
         "Role": null,
@@ -197,7 +281,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/{Id}",
+              "Path": "/Customers/{Id}",
               "Method": "DELETE"
             }
           }
@@ -210,12 +294,476 @@
       "Properties": {
         "TableName": {
           "Fn::If": [
-            "TableNameGenerated",
+            "CustomerTableGenerated",
             {
               "Ref": "AWS::NoValue"
             },
             {
               "Ref": "CustomerTableName"
+            }
+          ]
+        },
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "Id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "Id",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": {
+            "Ref": "ReadCapacity"
+          },
+          "WriteCapacityUnits": {
+            "Ref": "WriteCapacity"
+          }
+        }
+      }
+    },
+    "GetOrders": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::GetOrdersAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a list of orders",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "OrderTable": {
+              "Fn::If": [
+                "CreateOrderTable",
+                {
+                  "Ref": "OrderTable"
+                },
+                {
+                  "Ref": "OrderTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Orders/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "GetOrder": {    
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::GetOrderAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a single order",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "OrderTable": {
+              "Fn::If": [
+                "CreateOrderTable",
+                {
+                  "Ref": "OrderTable"
+                },
+                {
+                  "Ref": "OrderTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Orders/{Id}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "AddOrder": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::AddOrderAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to add a order",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "OrderTable": {
+              "Fn::If": [
+                "CreateOrderTable",
+                {
+                  "Ref": "CustomerTable"
+                },
+                {
+                  "Ref": "OrderTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Orders/",
+              "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+    "UpdateOrder": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::UpdateOrderAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to update order details after editing at front end",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "OrderTable": {
+              "Fn::If": [
+                "CreateOrderTable",
+                {
+                  "Ref": "OrderTable"
+                },
+                {
+                  "Ref": "OrderTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Orders/{Id}",
+              "Method": "PATCH"
+            }
+          }
+        }
+      }
+    },
+    "RemoveOrder": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::RemoveOrderAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to remove a order",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "OrderTable": {
+              "Fn::If": [
+                "CreateOrderTable",
+                {
+                  "Ref": "OrderTable"
+                },
+                {
+                  "Ref": "OrderTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Orders/{Id}",
+              "Method": "DELETE"
+            }
+          }
+        }
+      }
+    },
+    "OrderTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Condition": "CreateOrderTable",
+      "Properties": {
+        "TableName": {
+          "Fn::If": [
+            "OrderTableGenerated",
+            {
+              "Ref": "AWS::NoValue"
+            },
+            {
+              "Ref": "OrderTableName"
+            }
+          ]
+        },
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "CustomerId",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "CustomerId",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": {
+            "Ref": "ReadCapacity"
+          },
+          "WriteCapacityUnits": {
+            "Ref": "WriteCapacity"
+          }
+        }
+      }
+    },
+    "GetProducts": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.ProductFunctions::GetProductsAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a list of products",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "ProductTable": {
+              "Fn::If": [
+                "CreateProductTable",
+                {
+                  "Ref": "ProductTable"
+                },
+                {
+                  "Ref": "ProductTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Products/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "GetProduct": {    
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.ProductFunctions::GetProductAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to get a single product",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "ProductTable": {
+              "Fn::If": [
+                "CreateProductTable",
+                {
+                  "Ref": "ProductTable"
+                },
+                {
+                  "Ref": "ProductTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Products/{Id}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "AddProduct": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.ProductFunctions::AddProductAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to add a product",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "ProductTable": {
+              "Fn::If": [
+                "CreateProductTable",
+                {
+                  "Ref": "ProductTable"
+                },
+                {
+                  "Ref": "ProductTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Products/",
+              "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+    "UpdateProduct": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.ProductFunctions::UpdateProductAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to update product details after editing at front end",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "ProductTable": {
+              "Fn::If": [
+                "CreateProductTable",
+                {
+                  "Ref": "ProductTable"
+                },
+                {
+                  "Ref": "ProductTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Products/{Id}",
+              "Method": "PATCH"
+            }
+          }
+        }
+      }
+    },
+    "RemoveProduct": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.ProductFunctions::RemoveProductAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to remove a product",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess"
+        ],
+        "Environment": {
+          "Variables": {
+            "ProductTable": {
+              "Fn::If": [
+                "CreateProductTable",
+                {
+                  "Ref": "ProductTable"
+                },
+                {
+                  "Ref": "ProductTableName"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Products/{Id}",
+              "Method": "DELETE"
+            }
+          }
+        }
+      }
+    },
+    "ProductTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Condition": "CreateProductTable",
+      "Properties": {
+        "TableName": {
+          "Fn::If": [
+            "ProductTableGenerated",
+            {
+              "Ref": "AWS::NoValue"
+            },
+            {
+              "Ref": "ProductTableName"
             }
           ]
         },
@@ -252,6 +800,32 @@
           },
           {
             "Ref": "CustomerTableName"
+          }
+        ]
+      }
+    },
+    "OrderTable": {
+      "Value": {
+        "Fn::If": [
+          "CreateOrderTable",
+          {
+            "Ref": "OrderTable"
+          },
+          {
+            "Ref": "OrderTableName"
+          }
+        ]
+      }
+    },
+    "ProductTable": {
+      "Value": {
+        "Fn::If": [
+          "CreateProductTable",
+          {
+            "Ref": "ProductTable"
+          },
+          {
+            "Ref": "ProductTableName"
           }
         ]
       }

@@ -17,8 +17,10 @@ namespace MaoProduce_delivery_app
 {
     public class OrderFunctions
     {
-        // This const is the name of the environment variable that the serverless.template will use to set
-        // the name of the DynamoDB table used to store blog posts.
+        /// <summary>
+        /// This const is the name of the environment variable that the serverless.template will use to set
+        /// the name of the DynamoDB table used to store blog posts.
+        /// </summary>
         const string TABLENAME_ENVIRONMENT_VARIABLE_LOOKUP = "OrderTable";
 
         public const string ID_QUERY_STRING_NAME = "Id";
@@ -30,11 +32,11 @@ namespace MaoProduce_delivery_app
         public OrderFunctions()
         {
             // Check to see if a table name was passed in through environment variables and if so
-            // add the table mapping.
+            // add the table mapping.adfasdfasdf
             var tableName = System.Environment.GetEnvironmentVariable(TABLENAME_ENVIRONMENT_VARIABLE_LOOKUP);
             if (!string.IsNullOrEmpty(tableName))
             {
-                AWSConfigsDynamoDB.Context.TypeMappings[typeof(Orders)] = new Amazon.Util.TypeMapping(typeof(Orders), tableName);
+                AWSConfigsDynamoDB.Context.TypeMappings[typeof(CustomerOrders)] = new Amazon.Util.TypeMapping(typeof(CustomerOrders), tableName);
             }
 
             var config = new DynamoDBContextConfig { Conversion = DynamoDBEntryConversion.V2 };
@@ -50,7 +52,7 @@ namespace MaoProduce_delivery_app
         {
             if (!string.IsNullOrEmpty(tableName))
             {
-                AWSConfigsDynamoDB.Context.TypeMappings[typeof(Orders)] = new Amazon.Util.TypeMapping(typeof(Orders), tableName);
+                AWSConfigsDynamoDB.Context.TypeMappings[typeof(CustomerOrders)] = new Amazon.Util.TypeMapping(typeof(CustomerOrders), tableName);
             }
 
             var config = new DynamoDBContextConfig { Conversion = DynamoDBEntryConversion.V2 };
@@ -65,7 +67,7 @@ namespace MaoProduce_delivery_app
         public async Task<APIGatewayProxyResponse> GetOrdersAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
             context.Logger.LogLine("Getting orders");
-            var search = this.DDBContext.ScanAsync<Orders>(null);
+            var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
 
 
@@ -74,7 +76,7 @@ namespace MaoProduce_delivery_app
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonConvert.SerializeObject(page),
+                Body = LowercaseJsonSerializer.SerializeObject(page),
                 Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
 
@@ -88,13 +90,17 @@ namespace MaoProduce_delivery_app
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> GetOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            string orderomerId = null;
-            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                orderomerId = request.PathParameters[ID_QUERY_STRING_NAME];
-            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                orderomerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
 
-            if (string.IsNullOrEmpty(orderomerId))
+            //This function needs two paramenteres, CustomerId and OrderId.
+            //scans the CustomerId first then iterates the orders.
+            string customerId = null;
+            string orderId = null;
+            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                orderId = request.PathParameters[ID_QUERY_STRING_NAME];
+            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                orderId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
+
+            if (string.IsNullOrEmpty(orderId))
             {
                 return new APIGatewayProxyResponse
                 {
@@ -103,8 +109,8 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            context.Logger.LogLine($"Getting single orderomer {orderomerId}");
-            var order = await DDBContext.LoadAsync<Orders>(orderomerId);
+            context.Logger.LogLine($"Getting single orderomer {orderId}");
+            var order = await DDBContext.LoadAsync<Orders>(orderId);
             context.Logger.LogLine($"Found orderomer: {order != null}");
 
             if (order == null)

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MaoProduce_delivery_app
 {
-    public class CustomerOrder
+    public class CustomerOrders
     {
         public string CustomerId;
         public List<Orders> Orders;

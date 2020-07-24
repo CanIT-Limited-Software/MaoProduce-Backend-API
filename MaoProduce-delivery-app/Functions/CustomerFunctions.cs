@@ -138,11 +138,18 @@ namespace MaoProduce_delivery_app
             context.Logger.LogLine($"Saving customeromer details with id {customer.Id}");
             await DDBContext.SaveAsync<Customers>(customer);
 
+            //Set the body in json form
+            Dictionary<string, string> body = new Dictionary<string, string>
+            {
+                { "message", "Customer has been added!" },
+                { "UserId", customer.Id.ToString()}
+            };
+
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = customer.Id.ToString(),
-                Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } }
+                Body = JsonConvert.SerializeObject(body),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
             return response;
         }
@@ -174,7 +181,9 @@ namespace MaoProduce_delivery_app
 
             return new APIGatewayProxyResponse
             {
-                StatusCode = (int)HttpStatusCode.OK
+                StatusCode = (int)HttpStatusCode.OK,
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "Successfully removed customer" } }),
+                Headers = new Dictionary<string, string> { { "Content-type", "application/json"} }
             };
         }
 
@@ -202,17 +211,23 @@ namespace MaoProduce_delivery_app
 
 
             var customer = JsonConvert.DeserializeObject<Customers>(request?.Body);
-            customer.Id = Guid.NewGuid().ToString();
-            customer.CreatedTimestamp = DateTime.Now;
+            customer.Id = customerId;
 
-            context.Logger.LogLine($"Saving customeromer details with id {customer.Id}");
+            context.Logger.LogLine($"Saving customer details with id {customer.Id}");
             await DDBContext.SaveAsync<Customers>(customer);
+
+            //Set the body in json form
+            Dictionary<string, string> body = new Dictionary<string, string>
+            {
+                { "message", "Customer data have been updated!" },
+                { "UserId", customer.Id.ToString()}
+            };
 
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = customer.Id.ToString(),
-                Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } }
+                Body = JsonConvert.SerializeObject(body),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
             return response;
         }

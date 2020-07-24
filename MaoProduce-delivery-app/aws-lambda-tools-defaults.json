@@ -12,7 +12,7 @@
     "framework"     : "netcoreapp3.1",
     "s3-prefix"     : "MaoProduce-delivery-app/",
     "template"      : "serverless.template",
-    "template-parameters" : "\"ShouldCreateTable\"=\"true\";\"CustomerTableName\"=\"\";\"ReadCapacity\"=\"3\";\"WriteCapacity\"=\"3\"",
+    "template-parameters" : "\"ShouldCreateTable\"=\"true\";\"CustomerTableName\"=\"\";\"OrderTableName\"=\"\";\"ProductTableName\"=\"\";\"ReadCapacity\"=\"3\";\"WriteCapacity\"=\"3\"",
     "s3-bucket"           : "aws-ap-shoutheast-2-maoproduce-bucket",
     "stack-name"          : "MaoProduce-Stack"
 }
