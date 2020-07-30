@@ -19,11 +19,10 @@ namespace MaoProduce_delivery_app
     {
         /// <summary>
         /// This const is the name of the environment variable that the serverless.template will use to set
-        /// the name of the DynamoDB table used to store blog posts.
         /// </summary>
         const string TABLENAME_ENVIRONMENT_VARIABLE_LOOKUP = "OrderTable";
 
-        public const string ID_QUERY_STRING_NAME = "Id";
+        public const string ID_QUERY_STRING_NAME = "CustomerId";
         IDynamoDBContext DDBContext { get; set; }
 
         /// <summary>
@@ -60,7 +59,7 @@ namespace MaoProduce_delivery_app
         }
 
         /// <summary>
-        /// A Lambda function that returns back a page worth of blog posts.
+        /// A Lambda function that returns a list of orders. Open orders on default.
         /// </summary>
         /// <param name="request"></param>
         /// <returns>The list of blogs</returns>
@@ -69,6 +68,26 @@ namespace MaoProduce_delivery_app
             context.Logger.LogLine("Getting orders");
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
+            List<Orders> orderList = new List<Orders>();
+
+            foreach(var customer in page)
+            {
+                foreach(var list in customer.Orders)
+                {
+                    if (list.IsOpen == true)
+                    {
+                        //if open filter
+                        orderList.Add(list);
+                    }
+                    else
+                    {
+                        //if all filter
+                        orderList.Add(list);
+                    }
+                }
+
+            }
+
 
 
             context.Logger.LogLine($"Found {page.Count} orders");
@@ -76,7 +95,7 @@ namespace MaoProduce_delivery_app
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = LowercaseJsonSerializer.SerializeObject(page),
+                Body = LowercaseJsonSerializer.SerializeObject(orderList),
                 Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
 
@@ -84,23 +103,28 @@ namespace MaoProduce_delivery_app
         }
 
         /// <summary>
-        /// A Lambda function that returns the blog identified by blogId
+        /// A Lambda function that returns orders from a single customer.
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<APIGatewayProxyResponse> GetOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
+        public async Task<APIGatewayProxyResponse> GetOrdersByCustAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-
-            //This function needs two paramenteres, CustomerId and OrderId.
-            //scans the CustomerId first then iterates the orders.
+            //Two parameters should be passed. Customer Id is required to load orders from customer
+            bool isOpen = true;
             string customerId = null;
-            string orderId = null;
-            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                orderId = request.PathParameters[ID_QUERY_STRING_NAME];
-            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                orderId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
+            List<Orders> orderList = new List<Orders>();
 
-            if (string.IsNullOrEmpty(orderId))
+            //check for customerId parameter
+            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.PathParameters[ID_QUERY_STRING_NAME];
+            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
+            //check for status(isOpen) filter
+            if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("isOpen"))
+                isOpen = bool.Parse(request.QueryStringParameters["isOpen"]);
+
+            //Check if CustomerId exist; else send bad request response.
+            if (string.IsNullOrEmpty(customerId))
             {
                 return new APIGatewayProxyResponse
                 {
@@ -109,22 +133,43 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            context.Logger.LogLine($"Getting single orderomer {orderId}");
-            var order = await DDBContext.LoadAsync<Orders>(orderId);
-            context.Logger.LogLine($"Found orderomer: {order != null}");
+            //Function to load from dynamodb
+            context.Logger.LogLine($"Getting orders from customer {customerId}");
+            var orders = await DDBContext.LoadAsync<CustomerOrders>(customerId);
+            context.Logger.LogLine($"Found Orders for Customer: {orders != null}");
 
-            if (order == null)
+            //check if orders exist in customer
+            if (orders == null)
             {
                 return new APIGatewayProxyResponse
                 {
-                    StatusCode = (int)HttpStatusCode.NotFound
+                    StatusCode = (int)HttpStatusCode.NotFound,
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string>{ { "message", "The cutomer orders is empty." } }),
+                    Headers = new Dictionary <string, string> { { "Content-Type", "application/json"} }
                 };
             }
 
+            //check if filter is requested else pass all orders from customer
+            if (isOpen)
+            {
+                foreach (var item in orders.Orders)
+                {
+                    if (item.IsOpen == true)
+                    {
+                        orderList.Add(item);
+                    }
+                }
+            }
+            else
+            {
+                orderList = orders.Orders;
+            }
+           
+            //response
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonConvert.SerializeObject(order),
+                Body = LowercaseJsonSerializer.SerializeObject(orderList),
                 Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
             return response;

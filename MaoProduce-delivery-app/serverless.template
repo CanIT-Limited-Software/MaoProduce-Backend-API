@@ -364,13 +364,13 @@
         }
       }
     },
-    "GetOrder": {    
+    "GetOrdersByCust": {    
       "Type": "AWS::Serverless::Function",
       "Properties": {
-        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::GetOrderAsync",
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.OrderFunctions::GetOrdersByCustAsync",
         "Runtime": "dotnetcore3.1",
         "CodeUri": "",
-        "Description": "Function to get a single order",
+        "Description": "Function to get a list of order from a single customer",
         "MemorySize": 256,
         "Timeout": 30,
         "Role": null,
@@ -396,7 +396,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/Orders/{Id}",
+              "Path": "/Orders/{CustomerId}",
               "Method": "GET"
             }
           }
@@ -435,7 +435,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/Orders/",
+              "Path": "/Orders/{CustomerId}",
               "Method": "PUT"
             }
           }
@@ -474,7 +474,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/Orders/{Id}",
+              "Path": "/Orders/{CustomerId}",
               "Method": "PATCH"
             }
           }
@@ -513,7 +513,7 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/Orders/{Id}",
+              "Path": "/Orders/{CustomerId}",
               "Method": "DELETE"
             }
           }
