@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using MaoProduce_delivery_app.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
-//[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
+[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
 namespace MaoProduce_delivery_app
 {
@@ -58,6 +59,22 @@ namespace MaoProduce_delivery_app
             this.DDBContext = new DynamoDBContext(ddbClient, config);
         }
 
+
+        ///<SUMMMARY>
+        /// A Function that will load customer database
+        ///</---->
+        public void LoadDatabase()
+        {
+            var tableName = System.Environment.GetEnvironmentVariable("CustomerTable");
+            if (!string.IsNullOrEmpty(tableName))
+            {
+                AWSConfigsDynamoDB.Context.TypeMappings[typeof(Customers)] = new Amazon.Util.TypeMapping(typeof(Customers), tableName);
+            }
+
+            var config = new DynamoDBContextConfig { Conversion = DynamoDBEntryConversion.V2 };
+            this.DDBContext = new DynamoDBContext(new AmazonDynamoDBClient(), config);
+        }
+
         /// <summary>
         /// A Lambda function that returns a list of orders. Open orders on default.
         /// </summary>
@@ -65,33 +82,73 @@ namespace MaoProduce_delivery_app
         /// <returns>The list of blogs</returns>
         public async Task<APIGatewayProxyResponse> GetOrdersAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            context.Logger.LogLine("Getting orders");
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
-            List<Orders> orderList = new List<Orders>();
 
-            foreach(var customer in page)
+            //Create a list that will store orders with extra fields cust id and name
+            List<Order_AllOrders> orderList = new List<Order_AllOrders>();
+            bool isOpen = true;
+
+            //Check for filters
+            //check for status(isOpen) filter
+            if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("isOpen"))
+                isOpen = bool.Parse(request.QueryStringParameters["isOpen"]);
+
+
+            //Cycle through users and get the orders
+            foreach (var customer in page)
             {
-                foreach(var list in customer.Orders)
+                foreach (var item in customer.Orders)
                 {
-                    if (list.IsOpen == true)
+                    //instantiate all order object to convert orders later
+                    var allorder = new Order_AllOrders();
+                    if (isOpen)
                     {
-                        //if open filter
-                        orderList.Add(list);
+                        //call function to get customer from customer table
+                        LoadDatabase();
+                        //call dynamodb 
+                        var cust = await DDBContext.LoadAsync<Customers>(customer.CustomerId);
+
+                        //assign all fields appropriately
+                        allorder.CustomerId = customer.CustomerId;
+                        allorder.CustomerName = cust.Name;
+                        allorder.DateTime = item.DateTime;
+                        allorder.Id = item.Id;
+                        allorder.IsOpen = item.IsOpen;
+                        allorder.Products = item.Products;
+                        allorder.TotalPrice = item.TotalPrice;
+
+                        //check status
+                        if (item.IsOpen == true)
+                            orderList.Add(allorder);
                     }
                     else
                     {
-                        //if all filter
-                        orderList.Add(list);
+                        //call function to get customer from customer table
+                        LoadDatabase();
+                        //call dynamodb 
+                        var cust = await DDBContext.LoadAsync<Customers>(customer.CustomerId);
+
+                        //convert order to allorders -> assign all fields appropriately
+                        allorder.CustomerId = customer.CustomerId;
+                        allorder.CustomerName = cust.Name;
+                        allorder.DateTime = item.DateTime;
+                        allorder.Id = item.Id;
+                        allorder.IsOpen = item.IsOpen;
+                        allorder.Products = item.Products;
+                        allorder.TotalPrice = item.TotalPrice;
+
+                        //add allorders to list
+                        orderList.Add(allorder);
                     }
                 }
-
             }
 
-
-
+            //Sort order list by date Ascending
+            orderList.Sort((o1, o2) => DateTime.Compare(o2.DateTime, o1.DateTime));
             context.Logger.LogLine($"Found {page.Count} orders");
 
+            //Response
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
@@ -135,8 +192,17 @@ namespace MaoProduce_delivery_app
 
             //Function to load from dynamodb
             context.Logger.LogLine($"Getting orders from customer {customerId}");
-            var orders = await DDBContext.LoadAsync<CustomerOrders>(customerId);
-            context.Logger.LogLine($"Found Orders for Customer: {orders != null}");
+            var orders = new CustomerOrders();
+            try
+            {
+                orders = await DDBContext.LoadAsync<CustomerOrders>(customerId);
+                orders.Orders.Sort((o1, o2) => DateTime.Compare(o2.DateTime, o1.DateTime));
+            }catch(Exception e)
+            {
+                //check if customer exist in orders table
+                context.Logger.LogLine($"There was an error: {e}");
+            }
+            
 
             //check if orders exist in customer
             if (orders == null)
@@ -144,7 +210,7 @@ namespace MaoProduce_delivery_app
                 return new APIGatewayProxyResponse
                 {
                     StatusCode = (int)HttpStatusCode.NotFound,
-                    Body = JsonConvert.SerializeObject(new Dictionary<string, string>{ { "message", "The cutomer orders is empty." } }),
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string>{ { "message", "ORDER_IS_EMPTY" } }),
                     Headers = new Dictionary <string, string> { { "Content-Type", "application/json"} }
                 };
             }
@@ -182,8 +248,20 @@ namespace MaoProduce_delivery_app
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> AddOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            var order = JsonConvert.DeserializeObject<Orders>(request?.Body);
-            order.Id = Guid.NewGuid().ToString();
+            string customerId;
+
+            //check for customerId parameter
+            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.PathParameters[ID_QUERY_STRING_NAME];
+            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
+
+
+
+
+            var order = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
+
+            order.Id = ;
             order.DateTime = DateTime.Now;
 
             context.Logger.LogLine($"Saving orderomer details with id {order.Id}");

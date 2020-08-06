@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
-[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
+//[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
 namespace MaoProduce_delivery_app
 {
@@ -88,13 +88,13 @@ namespace MaoProduce_delivery_app
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> GetCustomerAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            string customeromerId = null;
+            string customerId = null;
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                customeromerId = request.PathParameters[ID_QUERY_STRING_NAME];
+                customerId = request.PathParameters[ID_QUERY_STRING_NAME];
             else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                customeromerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
+                customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
 
-            if (string.IsNullOrEmpty(customeromerId))
+            if (string.IsNullOrEmpty(customerId))
             {
                 return new APIGatewayProxyResponse
                 {
@@ -103,8 +103,8 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            context.Logger.LogLine($"Getting single customeromer {customeromerId}");
-            var customer = await DDBContext.LoadAsync<Customers>(customeromerId);
+            context.Logger.LogLine($"Getting single customeromer {customerId}");
+            var customer = await DDBContext.LoadAsync<Customers>(customerId);
             context.Logger.LogLine($"Found customeromer: {customer != null}");
 
             if (customer == null)
