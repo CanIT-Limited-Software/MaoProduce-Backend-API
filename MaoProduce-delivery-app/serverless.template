@@ -422,7 +422,7 @@
               "Fn::If": [
                 "CreateOrderTable",
                 {
-                  "Ref": "CustomerTable"
+                  "Ref": "OrderTable"
                 },
                 {
                   "Ref": "OrderTableName"

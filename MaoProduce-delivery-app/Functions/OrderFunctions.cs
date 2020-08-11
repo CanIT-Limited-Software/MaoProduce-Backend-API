@@ -3,10 +3,13 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using Amazon.Runtime.Internal.Util;
 using MaoProduce_delivery_app.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -157,6 +160,7 @@ namespace MaoProduce_delivery_app
             };
 
             return response;
+            
         }
 
         /// <summary>
@@ -248,30 +252,62 @@ namespace MaoProduce_delivery_app
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> AddOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            string customerId;
+            //instantiate new customer order object
+            CustomerOrders newCustomerOrder = new CustomerOrders();
+            Orders newOrder = new Orders();
+            string customerId = null;
+            string loid;
 
-            //check for customerId parameter
+            //check for customerId parameter from url
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
                 customerId = request.PathParameters[ID_QUERY_STRING_NAME];
             else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
                 customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
 
 
+            ////GET the last order number
+            var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
+            var page = await search.GetNextSetAsync();
+            List<int> list = new List<int>();
+            
+            context.Logger.LogLine("Passed through line 272");
+            foreach (var customer in page)
+            {
+                list.Add(int.Parse(customer.LastOrderId));
+            }
+            context.Logger.LogLine("Passed through line 277");
+            loid = (list.Max() + 1).ToString();
+            context.Logger.LogLine($"The highest number in database is: {loid}");
 
 
-            var order = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
+            //get the request body
+            var requestOrder = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
 
-            order.Id = ;
-            order.DateTime = DateTime.Now;
+            //Convert sent All Orders to Orders Model
+            newOrder.Id = loid;
+            newOrder.DateTime = DateTime.Now;
+            newOrder.IsOpen = requestOrder.IsOpen;
+            newOrder.TotalPrice = requestOrder.TotalPrice;
+            newOrder.Products = requestOrder.Products;
 
-            context.Logger.LogLine($"Saving orderomer details with id {order.Id}");
-            await DDBContext.SaveAsync<Orders>(order);
 
+            //Assign values to new CustomerOrders object
+            newCustomerOrder.CustomerId = customerId;
+            newCustomerOrder.LastOrderId = loid;
+            newCustomerOrder.addList(newOrder);
+            context.Logger.LogLine(JsonConvert.SerializeObject(newCustomerOrder));
+            //context.Logger.LogLine(JsonConvert.SerializeObject(newOrder));
+
+            //Save the order in the right customer.
+            var saveOrder = DDBContext.SaveAsync<CustomerOrders>(newCustomerOrder);
+
+
+            //create success response
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = order.Id.ToString(),
-                Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } }
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { {"message", "Order sucessfully created" }, {"orderId", loid} }),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
             };
             return response;
         }

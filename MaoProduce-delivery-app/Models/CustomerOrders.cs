@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Amazon.DynamoDBv2.Model;
+using System;
 
 using System.Collections.Generic;
 using System.Data;
@@ -9,7 +10,12 @@ namespace MaoProduce_delivery_app
 {
     public class CustomerOrders
     {
-        public string CustomerId;
-        public List<Orders> Orders;
+        public string CustomerId { get; set; }
+        public string LastOrderId { get; set; }
+        public List<Orders> Orders = new List<Orders>();
+        public void addList(Orders order)
+        {
+            Orders.Add(order);
+        }
     }
 }

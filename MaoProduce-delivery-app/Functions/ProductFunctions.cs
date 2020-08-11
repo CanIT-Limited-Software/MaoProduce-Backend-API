@@ -30,7 +30,7 @@ namespace MaoProduce_delivery_app
         public ProductFunctions()
         {
             // Check to see if a table name was passed in through environment variables and if so
-            // add the table mapping.adfasdfasdf
+            // add the table mapping.
             var tableName = System.Environment.GetEnvironmentVariable(TABLENAME_ENVIRONMENT_VARIABLE_LOOKUP);
             if (!string.IsNullOrEmpty(tableName))
             {
