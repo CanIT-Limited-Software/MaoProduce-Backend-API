@@ -75,7 +75,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = LowercaseJsonSerializer.SerializeObject(page),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
 
             return response;
@@ -119,7 +119,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = LowercaseJsonSerializer.SerializeObject(customer),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
@@ -149,7 +149,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(body),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
@@ -183,7 +183,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "Successfully removed customer" } }),
-                Headers = new Dictionary<string, string> { { "Content-type", "application/json"} }
+                Headers = new Dictionary<string, string> { { "Content-type", "application/json; charset=utf-8" } }
             };
         }
 
@@ -227,7 +227,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(body),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }

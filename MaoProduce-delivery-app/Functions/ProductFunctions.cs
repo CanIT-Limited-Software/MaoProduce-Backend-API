@@ -75,7 +75,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = LowercaseJsonSerializer.SerializeObject(page),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
 
             return response;
@@ -119,7 +119,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(product),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
@@ -149,7 +149,7 @@ namespace MaoProduce_delivery_app
                 {
                     StatusCode = (int)HttpStatusCode.OK,
                     Body = JsonConvert.SerializeObject(body),
-                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
                 return response;
             } catch (Exception e)
@@ -158,7 +158,7 @@ namespace MaoProduce_delivery_app
                 {
                     StatusCode = (int)HttpStatusCode.Conflict,
                     Body = e.ToString(),
-                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
                 return response;
             }
@@ -193,7 +193,8 @@ namespace MaoProduce_delivery_app
             return new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "Sucessfully deleted the user"}, { "userId", Id.ToString()} })
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "Sucessfully deleted the user"}, { "userId", Id.ToString()} }),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
         }
 
@@ -237,7 +238,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(body),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }

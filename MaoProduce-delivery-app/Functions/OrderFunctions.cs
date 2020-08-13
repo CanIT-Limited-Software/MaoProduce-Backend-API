@@ -35,7 +35,7 @@ namespace MaoProduce_delivery_app
         public OrderFunctions()
         {
             // Check to see if a table name was passed in through environment variables and if so
-            // add the table mapping.adfasdfasdf
+            // add the table mapping.
             var tableName = System.Environment.GetEnvironmentVariable(TABLENAME_ENVIRONMENT_VARIABLE_LOOKUP);
             if (!string.IsNullOrEmpty(tableName))
             {
@@ -156,7 +156,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = LowercaseJsonSerializer.SerializeObject(orderList),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
 
             return response;
@@ -215,7 +215,7 @@ namespace MaoProduce_delivery_app
                 {
                     StatusCode = (int)HttpStatusCode.NotFound,
                     Body = JsonConvert.SerializeObject(new Dictionary<string, string>{ { "message", "ORDER_IS_EMPTY" } }),
-                    Headers = new Dictionary <string, string> { { "Content-Type", "application/json"} }
+                    Headers = new Dictionary <string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
             }
 
@@ -240,7 +240,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = LowercaseJsonSerializer.SerializeObject(orderList),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
@@ -253,7 +253,7 @@ namespace MaoProduce_delivery_app
         public async Task<APIGatewayProxyResponse> AddOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
             //instantiate new customer order object
-            CustomerOrders newCustomerOrder = new CustomerOrders();
+            //CustomerOrders newCustomerOrder = new CustomerOrders();
             Orders newOrder = new Orders();
             string customerId = null;
             string loid;
@@ -292,14 +292,23 @@ namespace MaoProduce_delivery_app
 
 
             //Assign values to new CustomerOrders object
-            newCustomerOrder.CustomerId = customerId;
-            newCustomerOrder.LastOrderId = loid;
-            newCustomerOrder.addList(newOrder);
-            context.Logger.LogLine(JsonConvert.SerializeObject(newCustomerOrder));
+            //newCustomerOrder.CustomerId = customerId;
+            //newCustomerOrder.LastOrderId = loid;
+            //newCustomerOrder.addList(newOrder);
+            //context.Logger.LogLine(JsonConvert.SerializeObject(newCustomerOrder));
             //context.Logger.LogLine(JsonConvert.SerializeObject(newOrder));
 
+
+
+            //load current customer data in dynamodb order table
+            var custNewOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
+            custNewOrder.LastOrderId = loid;
+            custNewOrder.Orders.Add(newOrder);
+
+
+
             //Save the order in the right customer.
-            var saveOrder = DDBContext.SaveAsync<CustomerOrders>(newCustomerOrder);
+            var saveOrder = DDBContext.SaveAsync<CustomerOrders>(custNewOrder);
 
 
             //create success response
@@ -307,7 +316,7 @@ namespace MaoProduce_delivery_app
             {
                 StatusCode = (int)HttpStatusCode.OK,
                 Body = JsonConvert.SerializeObject(new Dictionary<string, string> { {"message", "Order sucessfully created" }, {"orderId", loid} }),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } }
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
