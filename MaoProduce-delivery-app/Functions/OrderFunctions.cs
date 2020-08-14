@@ -82,7 +82,7 @@ namespace MaoProduce_delivery_app
         /// A Lambda function that returns a list of orders. Open orders on default.
         /// </summary>
         /// <param name="request"></param>
-        /// <returns>The list of blogs</returns>
+        /// <returns>The list of orders</returns>
         public async Task<APIGatewayProxyResponse> GetOrdersAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
@@ -111,6 +111,8 @@ namespace MaoProduce_delivery_app
                         LoadDatabase();
                         //call dynamodb 
                         var cust = await DDBContext.LoadAsync<Customers>(customer.CustomerId);
+                        if (cust == null)
+                            continue;
 
                         //assign all fields appropriately
                         allorder.CustomerId = customer.CustomerId;
@@ -160,7 +162,7 @@ namespace MaoProduce_delivery_app
             };
 
             return response;
-            
+
         }
 
         /// <summary>
@@ -201,12 +203,13 @@ namespace MaoProduce_delivery_app
             {
                 orders = await DDBContext.LoadAsync<CustomerOrders>(customerId);
                 orders.Orders.Sort((o1, o2) => DateTime.Compare(o2.DateTime, o1.DateTime));
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 //check if customer exist in orders table
                 context.Logger.LogLine($"There was an error: {e}");
             }
-            
+
 
             //check if orders exist in customer
             if (orders == null)
@@ -214,8 +217,8 @@ namespace MaoProduce_delivery_app
                 return new APIGatewayProxyResponse
                 {
                     StatusCode = (int)HttpStatusCode.NotFound,
-                    Body = JsonConvert.SerializeObject(new Dictionary<string, string>{ { "message", "ORDER_IS_EMPTY" } }),
-                    Headers = new Dictionary <string, string> { { "Content-Type", "application/json; charset=utf-8" } }
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "ORDER_IS_EMPTY" } }),
+                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
             }
 
@@ -234,7 +237,7 @@ namespace MaoProduce_delivery_app
             {
                 orderList = orders.Orders;
             }
-           
+
             //response
             var response = new APIGatewayProxyResponse
             {
@@ -246,17 +249,16 @@ namespace MaoProduce_delivery_app
         }
 
         /// <summary>
-        /// A Lambda function that adds a blog post.
+        /// A Lambda function that adds an order by customer.
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> AddOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            //instantiate new customer order object
-            //CustomerOrders newCustomerOrder = new CustomerOrders();
+            //instantiate new order object
             Orders newOrder = new Orders();
             string customerId = null;
-            string loid;
+            string lastOrderId;
 
             //check for customerId parameter from url
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
@@ -269,72 +271,73 @@ namespace MaoProduce_delivery_app
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
             List<int> list = new List<int>();
-            
+
             context.Logger.LogLine("Passed through line 272");
             foreach (var customer in page)
             {
                 list.Add(int.Parse(customer.LastOrderId));
             }
             context.Logger.LogLine("Passed through line 277");
-            loid = (list.Max() + 1).ToString();
-            context.Logger.LogLine($"The highest number in database is: {loid}");
+            lastOrderId = (list.Max() + 1).ToString();
+            context.Logger.LogLine($"The highest number in database is: {lastOrderId}");
 
 
             //get the request body
             var requestOrder = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
 
             //Convert sent All Orders to Orders Model
-            newOrder.Id = loid;
+            newOrder.Id = lastOrderId;
             newOrder.DateTime = DateTime.Now;
             newOrder.IsOpen = requestOrder.IsOpen;
             newOrder.TotalPrice = requestOrder.TotalPrice;
             newOrder.Products = requestOrder.Products;
 
-
-            //Assign values to new CustomerOrders object
-            //newCustomerOrder.CustomerId = customerId;
-            //newCustomerOrder.LastOrderId = loid;
-            //newCustomerOrder.addList(newOrder);
-            //context.Logger.LogLine(JsonConvert.SerializeObject(newCustomerOrder));
-            //context.Logger.LogLine(JsonConvert.SerializeObject(newOrder));
-
-
-
             //load current customer data in dynamodb order table
             var custNewOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
-            custNewOrder.LastOrderId = loid;
-            custNewOrder.Orders.Add(newOrder);
+            if (custNewOrder != null)
+            {
+                custNewOrder.LastOrderId = lastOrderId;
+                custNewOrder.Orders.Add(newOrder);
 
+                //Save the order in the right customer.
+                var saveOrder = DDBContext.SaveAsync<CustomerOrders>(custNewOrder);
+            }
+            else
+            {
+                CustomerOrders newCustOrder = new CustomerOrders();
+                newCustOrder.CustomerId = customerId;
+                newCustOrder.LastOrderId = lastOrderId;
+                newCustOrder.addList(newOrder);
 
-
-            //Save the order in the right customer.
-            var saveOrder = DDBContext.SaveAsync<CustomerOrders>(custNewOrder);
+                //Save to Dynamodb
+                var saveOrder = DDBContext.SaveAsync<CustomerOrders>(newCustOrder);
+            }
 
 
             //create success response
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { {"message", "Order sucessfully created" }, {"orderId", loid} }),
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", "Order sucessfully created" }, { "orderId", lastOrderId } }),
                 Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
             return response;
         }
 
         /// <summary>
-        /// A Lambda function that removes a blog post from the DynamoDB table.
+        /// A Lambda function that removes an order post from Customer in Orders table.
         /// </summary>
         /// <param name="request"></param>
         public async Task<APIGatewayProxyResponse> RemoveOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            string customerId = null;
             string orderId = null;
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.PathParameters[ID_QUERY_STRING_NAME];
+            if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("orderId"))
+                orderId = request.QueryStringParameters["orderId"];
 
-                orderId = request.PathParameters[ID_QUERY_STRING_NAME];
-            else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
-                orderId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
-
-            if (string.IsNullOrEmpty(orderId))
+            if (string.IsNullOrEmpty(orderId) || string.IsNullOrEmpty(customerId))
             {
                 return new APIGatewayProxyResponse
                 {
@@ -343,13 +346,102 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            context.Logger.LogLine($"Deleting blog with id {orderId}");
-            await this.DDBContext.DeleteAsync<Orders>(orderId);
+
+            context.Logger.LogLine($"Deleting order with Customer: {customerId} AND id: {orderId}");
+
+            var cust = await DDBContext.LoadAsync<CustomerOrders>(customerId);
+            if (cust != null)
+            {
+                foreach (var order in cust.Orders.ToList())
+                {
+                    if (order.Id == orderId)
+                    {
+                        cust.removeList(order);
+                    }
+                }
+
+                //Update Dynamodb
+                await DDBContext.SaveAsync<CustomerOrders>(cust);
+            }
+            else
+            {
+                context.Logger.LogLine("There is an error please call the server master");
+            }
 
             return new APIGatewayProxyResponse
             {
-                StatusCode = (int)HttpStatusCode.OK
+                StatusCode = (int)HttpStatusCode.OK,
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", $"Sucessfully deleted the item: {orderId}" } }),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
             };
+        }
+
+
+
+        /// <summary>
+        /// A Lambda function that updates an order.
+        /// </summary>
+        /// <param name="request"></param>
+        public async Task<APIGatewayProxyResponse> UpdateOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
+        {
+            string customerId = null;
+            string orderId = null;
+
+
+            if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
+                customerId = request.PathParameters[ID_QUERY_STRING_NAME];
+            if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("orderId"))
+                orderId = request.QueryStringParameters["orderId"];
+
+            if (string.IsNullOrEmpty(orderId) || string.IsNullOrEmpty(customerId))
+            {
+                return new APIGatewayProxyResponse
+                {
+                    StatusCode = (int)HttpStatusCode.BadRequest,
+                    Body = $"Missing required parameter {ID_QUERY_STRING_NAME}"
+                };
+            }
+
+            //get the request body
+            var requestOrder = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
+
+
+            //update the needed data
+            var currentOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
+            if (currentOrder != null)
+            {
+               foreach(var order in currentOrder.Orders.ToList())
+                {
+                    if (order.Id == orderId)
+                    {
+                        order.TotalPrice = requestOrder.TotalPrice;
+                        order.IsOpen = requestOrder.IsOpen;
+                        order.Products = requestOrder.Products;
+                    }
+                }
+
+                //Update Dynamodb
+                await DDBContext.SaveAsync<CustomerOrders>(currentOrder);
+            }
+            else
+            {
+                context.Logger.LogLine("There is an error please call the server master");
+                return new APIGatewayProxyResponse
+                {
+                    StatusCode = (int)HttpStatusCode.NotFound,
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", $"Order not found: {orderId}" } }),
+                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
+                };
+            }
+
+            return new APIGatewayProxyResponse
+            {
+                StatusCode = (int)HttpStatusCode.OK,
+                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", $"Sucessfully updated the item: {orderId}" } }),
+                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
+            };
+
+
         }
     }
 }

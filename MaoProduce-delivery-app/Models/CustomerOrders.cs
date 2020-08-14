@@ -17,5 +17,9 @@ namespace MaoProduce_delivery_app
         {
             Orders.Add(order);
         }
+        public void removeList(Orders order)
+        {
+            Orders.Remove(order);
+        }
     }
 }
