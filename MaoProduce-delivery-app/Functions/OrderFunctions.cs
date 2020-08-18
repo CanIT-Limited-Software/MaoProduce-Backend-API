@@ -267,20 +267,25 @@ namespace MaoProduce_delivery_app
                 customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
 
 
-            ////GET the last order number
+            //GET the last order number
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
             List<int> list = new List<int>();
 
-            context.Logger.LogLine("Passed through line 272");
-            foreach (var customer in page)
-            {
-                list.Add(int.Parse(customer.LastOrderId));
-            }
-            context.Logger.LogLine("Passed through line 277");
-            lastOrderId = (list.Max() + 1).ToString();
-            context.Logger.LogLine($"The highest number in database is: {lastOrderId}");
 
+            if (!page.Any())
+            {
+                lastOrderId = "17050";
+            }
+            else
+            {
+                foreach (var customer in page)
+                {
+                    list.Add(int.Parse(customer.LastOrderId));
+                }
+
+                lastOrderId = (list.Max() + 1).ToString();
+            }
 
             //get the request body
             var requestOrder = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
