@@ -66,7 +66,7 @@ namespace MaoProduce_delivery_app
         ///<SUMMMARY>
         /// A Function that will load customer database
         ///</---->
-        public void LoadDatabase()
+        private void LoadDatabase()
         {
             var tableName = System.Environment.GetEnvironmentVariable("CustomerTable");
             if (!string.IsNullOrEmpty(tableName))
@@ -121,6 +121,7 @@ namespace MaoProduce_delivery_app
                         allorder.Id = item.Id;
                         allorder.IsOpen = item.IsOpen;
                         allorder.Products = item.Products;
+                        allorder.Signature = item.Signature;
                         allorder.TotalPrice = item.TotalPrice;
 
                         //check status
@@ -141,6 +142,7 @@ namespace MaoProduce_delivery_app
                         allorder.Id = item.Id;
                         allorder.IsOpen = item.IsOpen;
                         allorder.Products = item.Products;
+                        allorder.Signature = item.Signature;
                         allorder.TotalPrice = item.TotalPrice;
 
                         //add allorders to list
@@ -294,6 +296,7 @@ namespace MaoProduce_delivery_app
             newOrder.Id = lastOrderId;
             newOrder.DateTime = DateTime.Now;
             newOrder.IsOpen = requestOrder.IsOpen;
+            newOrder.Signature = requestOrder.Signature;
             newOrder.TotalPrice = requestOrder.TotalPrice;
             newOrder.Products = requestOrder.Products;
 
@@ -422,6 +425,7 @@ namespace MaoProduce_delivery_app
                         order.TotalPrice = requestOrder.TotalPrice;
                         order.IsOpen = requestOrder.IsOpen;
                         order.Products = requestOrder.Products;
+                        order.Signature = requestOrder.Signature;
                     }
                 }
 

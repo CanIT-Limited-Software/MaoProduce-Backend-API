@@ -11,6 +11,7 @@ namespace MaoProduce_delivery_app
         public string TotalPrice { get; set; }
         public DateTime DateTime { get; set; }
         public bool IsOpen { get; set; }
+        public SignatureDetails Signature { get; set; }
         public List<OrderProduct> Products { get; set; }
     }
 }
