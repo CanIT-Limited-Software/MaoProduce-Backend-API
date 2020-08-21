@@ -788,6 +788,31 @@
           }
         }
       }
+    },
+    "SendEmail": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "MaoProduce-delivery-app::MaoProduce_delivery_app.Functions.SendEmailFunctions::SendEmailAsync",
+        "Runtime": "dotnetcore3.1",
+        "CodeUri": "",
+        "Description": "Function to send invoice email",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [
+          "AWSLambdaFullAccess",
+          "AmazonSESFullAccess"
+        ],
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/Send/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
     }
   },
   "Outputs": {

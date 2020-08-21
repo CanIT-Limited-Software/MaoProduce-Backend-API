@@ -431,6 +431,12 @@ namespace MaoProduce_delivery_app
 
                 //Update Dynamodb
                 await DDBContext.SaveAsync<CustomerOrders>(currentOrder);
+                return new APIGatewayProxyResponse
+                {
+                    StatusCode = (int)HttpStatusCode.OK,
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", $"Sucessfully updated the item: {orderId}" } }),
+                    Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
+                };
             }
             else
             {
@@ -443,12 +449,7 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            return new APIGatewayProxyResponse
-            {
-                StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonConvert.SerializeObject(new Dictionary<string, string> { { "message", $"Sucessfully updated the item: {orderId}" } }),
-                Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
-            };
+            
 
 
         }
