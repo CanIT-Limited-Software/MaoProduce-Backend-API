@@ -100,43 +100,7 @@ namespace MaoProduce_delivery_app.Functions
                             Mao Produce";
 
             // The HTML body of the email.
-            string htmlBody = @"<head>
-                                  <meta charset='UTF-8' />
-                                  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-                                  <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css'
-                                    integrity='sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm' crossorigin='anonymous' />
-                                </head>
-                                <style>
-                                  .card {
-                                    height: 300px;
-                                    background-color: green;
-                                    color: white;
-                                    margin: auto;
-                                    width: 50%;
-                                    padding: 10px
-                                  }
-                                </style>
-
-                                <body style='background-color:grey';>
-                                     < div class='container'>
-                                    <div class='row text-center my-auto'>
-                                      <div class='col-12'>
-                                        <div class='card'>
-                                          <h1 style='color: red;'>Welcome to Mao Produce</h1>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <script src='https://code.jquery.com/jquery-3.2.1.slim.min.js'
-                                    integrity='sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN'
-                                    crossorigin='anonymous'></script>
-                                  <script src='https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js'
-                                    integrity='sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q'
-                                    crossorigin='anonymous'></script>
-                                  <script src='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js'
-                                    integrity='sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl'
-                                    crossorigin='anonymous'></script>
-                                </body>";
+            string htmlBody = @"";
 
             // Replace USWest2 with the AWS Region you're using for Amazon SES.
             // Acceptable values are EUWest1, USEast1, and USWest2.
@@ -156,34 +120,48 @@ namespace MaoProduce_delivery_app.Functions
                 new List<string> { "admin@maoproduce.co.nz" },
                 Content = new EmailContent
                 {
-                    Simple = new Message
+                    //Trying to send the templated email from ses
+                    Template = new Template
                     {
-                        Subject = new Content
-                        {
-                            Data = subject
-                        },
-                        Body = new Body
-                        {
-                            Html = new Content
-                            {
-                                Data = htmlBody
-                            },
-                            Text = new Content
-                            {
-                                Data = textBody
-                            }
-                        }
+                        TemplateData = "{\r\n    \"orderId\": \"123123123\",\r\n    \"customer_name\": \"Test 1\",\r\n    \"iteration_of_veggies\": \"Bock Bock Choy\",\r\n    \"veggie_price\": \"$2.00\",\r\n    \"quantity\": \"5\",\r\n    \"sub_total\": \"$10.00\",\r\n    \"total_price\": \"$10.00\"\r\n}",
+                        TemplateName = "Blue-Test"
                     }
-                },
-                // If you are not using a configuration set, comment
-                // or remove the following line 
-                //ConfigurationSetName = configSet
+
+                    //    Simple = new Message
+                    //    {
+                    //        Subject = new Content
+                    //        {
+                    //            Data = subject
+                    //        },
+                    //        Body = new Body
+                    //        {
+                    //            Html = new Content
+                    //            {
+                    //                Data = htmlBody
+                    //            },
+                    //            Text = new Content
+                    //            {
+                    //                Data = textBody
+                    //            }
+                    //        }
+                    //    }
+                    //},
+                    // If you are not using a configuration set, comment
+                    // or remove the following line 
+                    //ConfigurationSetName = configSet
+                }
             };
             try
             {
+                var tempObj = await client.GetEmailTemplateAsync(new GetEmailTemplateRequest { TemplateName = "Blue-Test" });
+                context.Logger.LogLine(JsonConvert.SerializeObject(tempObj));
                 context.Logger.LogLine("Sending email using Amazon SES...");
                 var response = await client.SendEmailAsync(sendRequest);
-                context.Logger.LogLine("The email was sent successfully.");
+                if (response.HttpStatusCode == HttpStatusCode.OK){
+                    context.Logger.LogLine(JsonConvert.SerializeObject(response));
+                    context.Logger.LogLine("The email was sent successfully.");
+                }
+                
 
                 var res = new APIGatewayProxyResponse
                 {
