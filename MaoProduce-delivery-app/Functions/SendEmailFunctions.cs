@@ -15,6 +15,7 @@ namespace MaoProduce_delivery_app.Functions
 {
     class SendEmailFunctions
     {
+        //OTENTOTENTEOTN
         /// <summary>
         /// This const is the name of the environment variable that the serverless.template will use to set
         /// </summary>
