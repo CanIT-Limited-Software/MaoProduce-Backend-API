@@ -807,8 +807,8 @@
           "PutResource": {
             "Type": "Api",
             "Properties": {
-              "Path": "/Send/",
-              "Method": "GET"
+              "Path": "/Send/{CustomerId}",
+              "Method": "POST"
             }
           }
         }
