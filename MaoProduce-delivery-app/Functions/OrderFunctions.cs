@@ -394,8 +394,6 @@ namespace MaoProduce_delivery_app
         {
             string customerId = null;
             string orderId = null;
-
-
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
                 customerId = request.PathParameters[ID_QUERY_STRING_NAME];
             if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("orderId"))
@@ -448,10 +446,6 @@ namespace MaoProduce_delivery_app
                     Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
             }
-
-            
-
-
         }
     }
 }
