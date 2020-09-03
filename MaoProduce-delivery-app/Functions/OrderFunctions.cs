@@ -3,15 +3,13 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using Amazon.Runtime.Internal.Util;
+using MaoProduce_delivery_app.Functions;
 using MaoProduce_delivery_app.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -257,6 +255,8 @@ namespace MaoProduce_delivery_app
         /// <returns></returns>
         public async Task<APIGatewayProxyResponse> AddOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            const string url = "https://maoproduce-stack-customer-signatures.s3-ap-southeast-2.amazonaws.com/";
+
             //instantiate new order object
             Orders newOrder = new Orders();
             string customerId = null;
@@ -296,11 +296,27 @@ namespace MaoProduce_delivery_app
             newOrder.Id = lastOrderId;
             newOrder.DateTime = DateTime.Now;
             newOrder.IsOpen = requestOrder.IsOpen;
-            newOrder.Signature = requestOrder.Signature;
+
+
+            //pass signature data to AWSS3BucketSave Function
+            string signatureTitle = newOrder.Id + "-" + String.Format("{0}.png", DateTime.Now.ToString("ddMMyyyyhhmmsstt"));
+            AWSS3BucketSave bucket = new AWSS3BucketSave();
+            await bucket.WritingAnObjectAsync(requestOrder.Signature.Signature, signatureTitle);
+
+
+            //New instance of signatture with url
+            SignatureDetails sig = new SignatureDetails();
+            sig.Signature = url + signatureTitle;
+            sig.Signee = requestOrder.Signature.Signee;
+
+
+            //Save new signature object
+            newOrder.Signature = sig;
             newOrder.TotalPrice = requestOrder.TotalPrice;
             newOrder.Products = requestOrder.Products;
+            
 
-            //load current customer data in dynamodb order table
+            ////load current customer data in dynamodb order table
             var custNewOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
             if (custNewOrder != null)
             {
