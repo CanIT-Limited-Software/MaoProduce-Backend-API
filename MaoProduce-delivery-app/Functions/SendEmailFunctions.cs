@@ -122,21 +122,7 @@ namespace MaoProduce_delivery_app.Functions
                 };
             }
 
-            //First setup email/template
-            string senderAddress = "Mao Produce <george@canit.co.nz>";
-            string receiverAddress = "sales@canit.co.nz";
-            string configSet = "ConfigSet";
-
-            // The subject line for the email.
-            string subject = $"Mao Produce Delivery Confirmation.";
-
-            // The email body for recipients with non-HTML email clients.
-            string textBody = @$"Hi Vincent, 
-                            Thank you for your order with Mao Produce. 
-                            We have recoreded your order: {orderId}.
-                            Please view this email in a updated browser to see more details.
-                            Thank You!
-                            Mao Produce";
+            
             try
             {
                 //First get the customer details
@@ -167,7 +153,14 @@ namespace MaoProduce_delivery_app.Functions
                 }
 
                 //Assign the products in order
-                htmlHeader = $"<center> <table width=\"100%\" style=\"max-width:620px;margin:0 auto;border:1px solid black; background-color:#ffffff\" bgcolor=\"#ffffff\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"0\" border=\"0\" cellpadding=\"20\" bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <tbody><tr> <td width=\"30\"> <center> <img width=\"170px\" height=\"auto\" style=\"width:170px;height:auto\" alt=\"Mao Produce\" src=\"https://shop.maoproduce.co.nz/image/catalog/logo.png\" data-image-whitelisted=\"\"> <h2 style=\"color:#3a9821; font-family: Arial, Helvetica, sans-serif; font-size:34px; font-weight: normal; line-height: 1.3;\">Dispatch Slip</h2> </center> </td> </tr> </tbody></table> </td> </tr> <tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"20\" border=\"0\" cellpadding=\"20\" bgcolor=\"#3a9821\" style=\"background-color:#ffffff\"> <tbody><tr> <td bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <h2 style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size:20px\">Hi, {customer_name}</h2> <p style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size: 15px; color:#474747\">You will find the order details in this email. <br> If you have any questions according to your order or about, please let us know.<br> Thanks for choosing Mao Produce. <br> </p><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"> <tbody><tr> <td valign=\"top\" width=\"50%\"> <table border=\"0\" cellspacing=\"0\" cellpadding=\"3\"> <tbody><tr> <td valign=\"top\">Order #:</td> <td valign=\"top\"><strong>{orderId}</strong></td> </tr> <tr> <td valign=\"top\">Signee:</td> <td valign=\"top\"> <strong>{signee}</strong> </td> <td> <img width=\"100px\" height=\"auto\" src=\"{signatureUrl}\" valign=\"bottom\" alt=\"signature\" align=\"center\" class=\"text-center\"></td> </tr> <tr> <td>&nbsp;</td> </tr> </tbody></table> </td> <td valign=\"top\" width=\"50%\"> </td> </tr></tbody></table><hr> <div style=\"font-size:11px\"> <table style=\"width:100%\" cellspacing=\"0\" cellpadding=\"3\"> <thead> <tr> <th valign=\"top\" align=\"left\" style=\"background:#e3e3e3\">Description</th> <th valign=\"top\" align=\"right\" width=\"30\" style=\"background:#e3e3e3\">Qty</th> <th valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Price</th> <th colspan=\"2\" valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Sub-Total</th> </tr> </thead> <tbody>";
+                if (string.IsNullOrEmpty(signatureUrl))
+                {
+                    htmlHeader = $"<center> <table width=\"100%\" style=\"max-width:620px;margin:0 auto;border:1px solid black; background-color:#ffffff\" bgcolor=\"#ffffff\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"0\" border=\"0\" cellpadding=\"20\" bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <tbody><tr> <td width=\"30\"> <center> <img width=\"170px\" height=\"auto\" style=\"width:170px;height:auto\" alt=\"Mao Produce\" src=\"https://shop.maoproduce.co.nz/image/catalog/logo.png\" data-image-whitelisted=\"\"> <h2 style=\"color:#3a9821; font-family: Arial, Helvetica, sans-serif; font-size:34px; font-weight: normal; line-height: 1.3;\">Dispatch Slip</h2> </center> </td> </tr> </tbody></table> </td> </tr> <tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"20\" border=\"0\" cellpadding=\"20\" bgcolor=\"#3a9821\" style=\"background-color:#ffffff\"> <tbody><tr> <td bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <h2 style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size:20px\">Hi, {customer_name}</h2> <p style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size: 15px; color:#474747\">You will find the order details in this email. <br> If you have any questions according to your order or about, please let us know.<br> Thanks for choosing Mao Produce. <br> </p><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"> <tbody><tr> <td valign=\"top\" width=\"50%\"> <table border=\"0\" cellspacing=\"0\" cellpadding=\"3\"> <tbody><tr> <td valign=\"top\">Order #:</td> <td valign=\"top\"><strong>{orderId}</strong></td> </tr> <tr> <td valign=\"top\">Signee:</td> <td valign=\"top\"> <strong>{signee}</strong> </td> <td> </td> </tr> <tr> <td>&nbsp;</td> </tr> </tbody></table> </td> <td valign=\"top\" width=\"50%\"> </td> </tr></tbody></table><hr> <div style=\"font-size:11px\"> <table style=\"width:100%\" cellspacing=\"0\" cellpadding=\"3\"> <thead> <tr> <th valign=\"top\" align=\"left\" style=\"background:#e3e3e3\">Description</th> <th valign=\"top\" align=\"right\" width=\"30\" style=\"background:#e3e3e3\">Qty</th> <th valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Price</th> <th colspan=\"2\" valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Sub-Total</th> </tr> </thead> <tbody>";
+                }
+                else
+                {
+                    htmlHeader = $"<center> <table width=\"100%\" style=\"max-width:620px;margin:0 auto;border:1px solid black; background-color:#ffffff\" bgcolor=\"#ffffff\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"0\" border=\"0\" cellpadding=\"20\" bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <tbody><tr> <td width=\"30\"> <center> <img width=\"170px\" height=\"auto\" style=\"width:170px;height:auto\" alt=\"Mao Produce\" src=\"https://shop.maoproduce.co.nz/image/catalog/logo.png\" data-image-whitelisted=\"\"> <h2 style=\"color:#3a9821; font-family: Arial, Helvetica, sans-serif; font-size:34px; font-weight: normal; line-height: 1.3;\">Dispatch Slip</h2> </center> </td> </tr> </tbody></table> </td> </tr> <tr> <td width=\"100%\" style=\"text-align:left\"> <table width=\"100%\" cellspacing=\"20\" border=\"0\" cellpadding=\"20\" bgcolor=\"#3a9821\" style=\"background-color:#ffffff\"> <tbody><tr> <td bgcolor=\"#ffffff\" style=\"background-color:#ffffff\"> <h2 style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size:20px\">Hi, {customer_name}</h2> <p style=\"font-family:Arial, Helvetica, sans-serif; line-height: 1.3; font-weight: normal; font-size: 15px; color:#474747\">You will find the order details in this email. <br> If you have any questions according to your order or about, please let us know.<br> Thanks for choosing Mao Produce. <br> </p><table border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"> <tbody><tr> <td valign=\"top\" width=\"50%\"> <table border=\"0\" cellspacing=\"0\" cellpadding=\"3\"> <tbody><tr> <td valign=\"top\">Order #:</td> <td valign=\"top\"><strong>{orderId}</strong></td> </tr> <tr> <td valign=\"top\">Signee:</td> <td valign=\"top\"> <strong>{signee}</strong> </td> <td> <img width=\"100px\" height=\"auto\" src=\"{signatureUrl}\" valign=\"bottom\" alt=\"signature\" align=\"center\" class=\"text-center\"></td> </tr> <tr> <td>&nbsp;</td> </tr> </tbody></table> </td> <td valign=\"top\" width=\"50%\"> </td> </tr></tbody></table><hr> <div style=\"font-size:11px\"> <table style=\"width:100%\" cellspacing=\"0\" cellpadding=\"3\"> <thead> <tr> <th valign=\"top\" align=\"left\" style=\"background:#e3e3e3\">Description</th> <th valign=\"top\" align=\"right\" width=\"30\" style=\"background:#e3e3e3\">Qty</th> <th valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Price</th> <th colspan=\"2\" valign=\"top\" align=\"right\" width=\"100\" style=\"background:#e3e3e3\">Sub-Total</th> </tr> </thead> <tbody>";
+                }
                 string htmlHeaderNeg = "";
                 foreach (var products in orderBody)
                 {
@@ -194,6 +187,21 @@ namespace MaoProduce_delivery_app.Functions
                 else
                     htmlHeader += $"<tr> <td align=\"left\" colspan=\"5\" style=\"border-bottom:solid 1px #e3e3e3\"></td> </tr> </tbody> <tfoot> <tr> <td align=\"right\" colspan=\"4\" style=\"background:#e3e3e3\"><strong>Total:</strong></td> <td align=\"right\" style=\"background:#e3e3e3\"><strong>{String.Format(culture, "{0:C}", double.Parse(totalPrice))}</strong></td> </tr> </tfoot> </table> </div><p><em style=\"font-family: Arial, Helvetica, sans-serif; font-size: 12px; color:#777777\"> <br> <center> \u00A9 Copyright © {year} <a style=\"text-decoration:none; color:#3a9821;\" href=\"https://www.maoproduce.co.nz\">Mao Produce</a> All Rights Reserved. <br> Powered by <a style=\"text-decoration:none; color:darkred;\" href=\"https://canit.co.nz\">CanIT Ltd.</a></p> </center></em></p> </td> </tr> </tbody></table> </td> </tr> </tbody></table> </center>";
 
+                //First setup email/template
+                string senderAddress = "Mao Produce <george@canit.co.nz>";
+                string receiverAddress = cust.Email;
+                string configSet = "ConfigSet";
+
+                // The subject line for the email.
+                string subject = $"Mao Produce Delivery Confirmation.";
+
+                // The email body for recipients with non-HTML email clients.
+                string textBody = @$"Hi, {customer_name}, 
+                            Thank you for your order with Mao Produce. 
+                            We have recoreded your order: {orderId}.
+                            Please view this email in a updated browser to see more details.
+                            Thank You!
+                            Mao Produce";
 
 
                 // Set-up to SES client
@@ -242,15 +250,14 @@ namespace MaoProduce_delivery_app.Functions
                     context.Logger.LogLine("The email was sent successfully.");
                 }
 
-
-                orderId = null;
+                
                 var res = new APIGatewayProxyResponse
                 {
                     StatusCode = (int)HttpStatusCode.OK,
-                    Body = JsonConvert.SerializeObject(new Dictionary<string, string> { {"message", "EMAIL_SENT" } }),
+                    Body = JsonConvert.SerializeObject(new Dictionary<string, string> { {"message", "EMAIL_SENT" }, { "orderId", orderId } }),
                     Headers = new Dictionary<string, string> { { "Content-Type", "application/json; charset=utf-8" } }
                 };
-
+                orderId = null;
                 return res;
             }
             catch (Exception ex)

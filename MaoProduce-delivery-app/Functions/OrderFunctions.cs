@@ -268,7 +268,6 @@ namespace MaoProduce_delivery_app
             else if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(ID_QUERY_STRING_NAME))
                 customerId = request.QueryStringParameters[ID_QUERY_STRING_NAME];
 
-
             //GET the last order number
             var search = this.DDBContext.ScanAsync<CustomerOrders>(null);
             var page = await search.GetNextSetAsync();
@@ -297,24 +296,29 @@ namespace MaoProduce_delivery_app
             newOrder.DateTime = DateTime.Now;
             newOrder.IsOpen = requestOrder.IsOpen;
 
-
             //pass signature data to AWSS3BucketSave Function
             string signatureTitle = newOrder.Id + "-" + String.Format("{0}.png", DateTime.Now.ToString("ddMMyyyyhhmmsstt"));
             AWSS3BucketSave bucket = new AWSS3BucketSave();
             await bucket.WritingAnObjectAsync(requestOrder.Signature.Signature, signatureTitle);
 
-
             //New instance of signatture with url
             SignatureDetails sig = new SignatureDetails();
-            sig.Signature = url + signatureTitle;
-            sig.Signee = requestOrder.Signature.Signee;
-
+            var sigExist = requestOrder.Signature;
+            if (string.IsNullOrEmpty(sigExist.Signature))
+            {
+                sig.Signature = "";
+                sig.Signee = requestOrder.Signature.Signee;
+            }
+            else
+            {
+                sig.Signature = url + signatureTitle;
+                sig.Signee = requestOrder.Signature.Signee;
+            }
 
             //Save new signature object
             newOrder.Signature = sig;
             newOrder.TotalPrice = requestOrder.TotalPrice;
             newOrder.Products = requestOrder.Products;
-            
 
             ////load current customer data in dynamodb order table
             var custNewOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
@@ -336,7 +340,6 @@ namespace MaoProduce_delivery_app
                 //Save to Dynamodb
                 var saveOrder = DDBContext.SaveAsync<CustomerOrders>(newCustOrder);
             }
-
 
             //create success response
             var response = new APIGatewayProxyResponse
@@ -369,9 +372,6 @@ namespace MaoProduce_delivery_app
                     Body = $"Missing required parameter {ID_QUERY_STRING_NAME}"
                 };
             }
-
-
-            context.Logger.LogLine($"Deleting order with Customer: {customerId} AND id: {orderId}");
 
             var cust = await DDBContext.LoadAsync<CustomerOrders>(customerId);
             if (cust != null)
@@ -408,6 +408,14 @@ namespace MaoProduce_delivery_app
         /// <param name="request"></param>
         public async Task<APIGatewayProxyResponse> UpdateOrderAsync(APIGatewayProxyRequest request, ILambdaContext context)
         {
+
+            //nested function check base64
+            static bool IsBase64String(string base64)
+            {
+                Span<byte> buffer = new Span<byte>(new byte[base64.Length]);
+                return Convert.TryFromBase64String(base64, buffer, out int bytesParsed);
+            }
+
             string customerId = null;
             string orderId = null;
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
@@ -427,7 +435,6 @@ namespace MaoProduce_delivery_app
             //get the request body
             var requestOrder = JsonConvert.DeserializeObject<Order_AllOrders>(request?.Body);
 
-
             //update the needed data
             var currentOrder = await DDBContext.LoadAsync<CustomerOrders>(customerId);
             if (currentOrder != null)
@@ -439,7 +446,34 @@ namespace MaoProduce_delivery_app
                         order.TotalPrice = requestOrder.TotalPrice;
                         order.IsOpen = requestOrder.IsOpen;
                         order.Products = requestOrder.Products;
-                        order.Signature = requestOrder.Signature;
+
+                        if (IsBase64String(requestOrder.Signature.Signature))
+                        {
+                            //pass signature data to AWSS3BucketSave Function
+                            string signatureTitle = orderId + "-" + String.Format("{0}.png", DateTime.Now.ToString("ddMMyyyyhhmmsstt"));
+                            AWSS3BucketSave bucket = new AWSS3BucketSave();
+                            await bucket.WritingAnObjectAsync(requestOrder.Signature.Signature, signatureTitle);
+
+
+                            //New instance of signatture with url
+                            SignatureDetails sig = new SignatureDetails();
+                            if (string.IsNullOrEmpty(requestOrder.Signature.Signature))
+                            {
+                                sig.Signature = "";
+                                sig.Signee = requestOrder.Signature.Signee;
+                            }
+                            else
+                            {
+                                sig.Signature = "https://maoproduce-stack-customer-signatures.s3-ap-southeast-2.amazonaws.com/" + signatureTitle;
+                                sig.Signee = requestOrder.Signature.Signee;
+                            }
+                            order.Signature = sig;
+                        }
+                        else
+                        {
+                            order.Signature = requestOrder.Signature;
+                        }
+                        
                     }
                 }
 

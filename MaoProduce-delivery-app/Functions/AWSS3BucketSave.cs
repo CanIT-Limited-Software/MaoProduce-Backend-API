@@ -3,7 +3,6 @@ using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
 using System.Threading.Tasks;
-using System.Text;
 using System.IO;
 
 namespace MaoProduce_delivery_app.Functions
@@ -13,9 +12,7 @@ namespace MaoProduce_delivery_app.Functions
         private const string bucketName = "maoproduce-stack-customer-signatures";
         // For simplicity the example creates two objects from the same file.
         private static readonly RegionEndpoint bucketRegion = RegionEndpoint.APSoutheast2;
-
         private static IAmazonS3 client;
-
         public async Task WritingAnObjectAsync(string signatureData, string dataTitle)
         {
             client = new AmazonS3Client(bucketRegion);
@@ -23,8 +20,6 @@ namespace MaoProduce_delivery_app.Functions
 
 
             //string imageData = Encoding.UTF8.GetString(bytearray);
-           
-
             try
             {
                 using (var stream = new MemoryStream(bytearray, 0, bytearray.Length))
@@ -37,10 +32,8 @@ namespace MaoProduce_delivery_app.Functions
                         InputStream = stream,
                         ContentType = "image/png"
                     };
-
                     PutObjectResponse response2 = await client.PutObjectAsync(putRequest2);
                 }
-                
             }
             catch (AmazonS3Exception e)
             {
