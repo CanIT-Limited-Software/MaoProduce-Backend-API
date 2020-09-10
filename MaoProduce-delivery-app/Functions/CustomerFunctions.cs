@@ -68,8 +68,8 @@ namespace MaoProduce_delivery_app
             var search = this.DDBContext.ScanAsync<Customers>(null);
             var page = await search.GetNextSetAsync();
 
-            
-            context.Logger.LogLine($"Found {page.Count} customers");
+            //Sort by name
+            page.Sort((p1, p2) => String.Compare(p1.Name, p2.Name));
 
             var response = new APIGatewayProxyResponse
             {

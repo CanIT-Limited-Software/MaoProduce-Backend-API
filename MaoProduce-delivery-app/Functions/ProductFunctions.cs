@@ -68,7 +68,8 @@ namespace MaoProduce_delivery_app
             var search = this.DDBContext.ScanAsync<Products>(null);
             var page = await search.GetNextSetAsync();
 
-
+            //Sort by name
+            page.Sort((p1, p2) => String.Compare(p1.Title, p2.Title));
             context.Logger.LogLine($"Found {page.Count} products");
 
             var response = new APIGatewayProxyResponse
@@ -114,6 +115,8 @@ namespace MaoProduce_delivery_app
                     StatusCode = (int)HttpStatusCode.NotFound
                 };
             }
+
+
 
             var response = new APIGatewayProxyResponse
             {
