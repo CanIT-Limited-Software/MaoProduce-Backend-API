@@ -26,7 +26,7 @@ namespace MaoProduce_delivery_app
 
         public const string ID_QUERY_STRING_NAME = "CustomerId";
         IDynamoDBContext DDBContext { get; set; }
-
+        IDynamoDBContext DDBContext2 { get; set; }
         /// <summary>
         /// Default constructor that Lambda will invoke.
         /// </summary>
@@ -66,14 +66,13 @@ namespace MaoProduce_delivery_app
         ///</---->
         private void LoadDatabase()
         {
-            var tableName = System.Environment.GetEnvironmentVariable("CustomerTable");
+            var tableName = "MaoProduce-Stack-CustomerTable-OZ2X2B0G09V6";
             if (!string.IsNullOrEmpty(tableName))
             {
                 AWSConfigsDynamoDB.Context.TypeMappings[typeof(Customers)] = new Amazon.Util.TypeMapping(typeof(Customers), tableName);
             }
-
             var config = new DynamoDBContextConfig { Conversion = DynamoDBEntryConversion.V2 };
-            this.DDBContext = new DynamoDBContext(new AmazonDynamoDBClient(), config);
+            this.DDBContext2 = new DynamoDBContext(new AmazonDynamoDBClient(), config);
         }
 
         /// <summary>
@@ -95,7 +94,6 @@ namespace MaoProduce_delivery_app
             if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey("isOpen"))
                 isOpen = bool.Parse(request.QueryStringParameters["isOpen"]);
 
-
             //Cycle through users and get the orders
             foreach (var customer in page)
             {
@@ -108,7 +106,7 @@ namespace MaoProduce_delivery_app
                         //call function to get customer from customer table
                         LoadDatabase();
                         //call dynamodb 
-                        var cust = await DDBContext.LoadAsync<Customers>(customer.CustomerId);
+                        var cust = await DDBContext2.LoadAsync<Customers>(customer.CustomerId);
                         if (cust == null)
                             continue;
 
@@ -131,7 +129,7 @@ namespace MaoProduce_delivery_app
                         //call function to get customer from customer table
                         LoadDatabase();
                         //call dynamodb 
-                        var cust = await DDBContext.LoadAsync<Customers>(customer.CustomerId);
+                        var cust = await DDBContext2.LoadAsync<Customers>(customer.CustomerId);
 
                         //convert order to allorders -> assign all fields appropriately
                         allorder.CustomerId = customer.CustomerId;
@@ -166,7 +164,7 @@ namespace MaoProduce_delivery_app
         }
 
         /// <summary>
-        /// A Lambda function that returns orders from a single customer.
+        /// A Lambda function that returns orders from a single customer. WORST CODE IN THIS PROJECT - DO IT BETTER PLS
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -175,7 +173,8 @@ namespace MaoProduce_delivery_app
             //Two parameters should be passed. Customer Id is required to load orders from customer
             bool isOpen = true;
             string customerId = null;
-            List<Orders> orderList = new List<Orders>();
+            string customerName = null;
+            List<Order_AllOrders> orderList = new List<Order_AllOrders>();
 
             //check for customerId parameter
             if (request.PathParameters != null && request.PathParameters.ContainsKey(ID_QUERY_STRING_NAME))
@@ -222,23 +221,81 @@ namespace MaoProduce_delivery_app
                 };
             }
 
-            //check if filter is requested else pass all orders from customer
+
+            //Cycle through users and get the orders
             if (isOpen)
             {
                 foreach (var item in orders.Orders)
                 {
                     if (item.IsOpen == true)
                     {
-                        orderList.Add(item);
+                        //call function to get customer from customer table
+                        LoadDatabase();
+                        //call dynamodb 
+                        var search = this.DDBContext2.ScanAsync<Customers>(null);
+                        var page = await search.GetNextSetAsync();
+
+                        foreach (var cust in page)
+                        {
+                            if (cust.Id == customerId)
+                            {
+                                customerName = cust.Name;
+                            }
+                        }
+                        //assign all fields appropriately
+                        //instantiate all order object to convert orders later
+                        var allorder = new Order_AllOrders
+                        {
+                            CustomerId = orders.CustomerId,
+                            CustomerName = customerName,
+                            DateTime = item.DateTime,
+                            Id = item.Id,
+                            IsOpen = item.IsOpen,
+                            Products = item.Products,
+                            Signature = item.Signature,
+                            TotalPrice = item.TotalPrice
+                        };
+                        orderList.Add(allorder);
                     }
                 }
             }
             else
             {
-                orderList = orders.Orders;
-            }
+                foreach (var item in orders.Orders)
+                {
+                    //call function to get customer from customer table
+                    LoadDatabase();
+                    //call dynamodb 
+                    var search = this.DDBContext2.ScanAsync<Customers>(null);
+                    var page = await search.GetNextSetAsync();
 
-            //response
+                    foreach (var cust in page)
+                    {
+                        if (cust.Id == customerId)
+                        {
+                            customerName = cust.Name;
+                        }
+                    }
+                    //assign all fields appropriately
+                    //instantiate all order object to convert orders later
+                    var allorder = new Order_AllOrders
+                    {
+                        CustomerId = orders.CustomerId,
+                        CustomerName = customerName,
+                        DateTime = item.DateTime,
+                        Id = item.Id,
+                        IsOpen = item.IsOpen,
+                        Products = item.Products,
+                        Signature = item.Signature,
+                        TotalPrice = item.TotalPrice
+                    };
+                    orderList.Add(allorder);
+                }
+            }
+            
+            
+
+            //response 
             var response = new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
