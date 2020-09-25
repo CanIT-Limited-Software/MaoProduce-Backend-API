@@ -214,10 +214,7 @@ namespace MaoProduce_delivery_app.Functions
                     Destination = new Destination
                     {
                         ToAddresses =
-                        new List<string> { receiverAddress },
-                        BccAddresses =
-                        new List<string> { "draggem0@gmail.com" }
-
+                        new List<string> { receiverAddress }
                     },
                     Content = new EmailContent
                     {
